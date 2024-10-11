@@ -187,11 +187,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let repo_regex = Regex::new(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$").unwrap();
-    if !repo_regex.is_match(&repo) {
-        error!("❌ Invalid repository format. Please use OWNER/REPO");
-        panic!("Invalid repository format");
-    }
+    // let repo_regex = Regex::new(r"^[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$").unwrap();
+    // if !repo_regex.is_match(&repo) {
+    //     error!("❌ Invalid repository format. Please use OWNER/REPO");
+    //     panic!("Invalid repository format");
+    // }
 
     info!("✨ Running with:");
     info!("✨ - local-cluster-tool: {:?}", tool);
@@ -313,7 +313,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // remove .git from repo
-    let repo = repo.trim_end_matches(".git");
+    //let repo = repo.trim_end_matches(".git");
     let base_apps = parsing::get_applications_as_string(
         BASE_BRANCH_FOLDER,
         &base_branch_name,

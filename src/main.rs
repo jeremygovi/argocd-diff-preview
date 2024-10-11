@@ -319,7 +319,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         &base_branch_name,
         &file_regex,
         &selector,
-        repo,
+        &repo,
     )
     .await?;
     let target_apps = parsing::get_applications_as_string(
@@ -327,7 +327,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         &target_branch_name,
         &file_regex,
         &selector,
-        repo,
+        &repo,
     )
     .await?;
 

@@ -86,6 +86,7 @@ enum ClusterTool {
     Minikube,
 }
 
+#[derive(Debug)]
 enum Branch {
     Base,
     Target,
@@ -100,11 +101,13 @@ impl std::fmt::Display for Branch {
     }
 }
 
+#[derive(Debug)]
 enum Operator {
     Eq,
     Ne,
 }
 
+#[derive(Debug)]
 struct Selector {
     key: String,
     value: String,

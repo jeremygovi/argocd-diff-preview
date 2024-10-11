@@ -3,7 +3,7 @@ use log::{debug, info};
 use regex::Regex;
 use serde_yaml::Mapping;
 use std::{error::Error, io::BufRead};
-use std::fmt::{self, Debug};
+use std::fmt::{Debug};
 
 #[derive(Debug)]
 struct K8sResource {

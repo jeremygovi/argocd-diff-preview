@@ -3,18 +3,22 @@ use log::{debug, info};
 use regex::Regex;
 use serde_yaml::Mapping;
 use std::{error::Error, io::BufRead};
+use std::fmt::{self, Debug};
 
+#[derive(Debug)]
 struct K8sResource {
     file_name: String,
     yaml: serde_yaml::Value,
 }
 
+#[derive(Debug)]
 struct Application {
     file_name: String,
     yaml: serde_yaml::Value,
     kind: ApplicationKind,
 }
 
+#[derive(Debug)]
 enum ApplicationKind {
     Application,
     ApplicationSet,

@@ -5,7 +5,7 @@ First, make sure Docker is running. Run `docker ps` to check if it's running.
 Second, run the following 3 commands:
 
 ```bash
-git clone https://github.com/dag-andersen/argocd-diff-preview base-branch --depth 1 -q 
+git clone https://github.com/dag-andersen/argocd-diff-preview base-branch --depth 1 -q
 
 git clone https://github.com/dag-andersen/argocd-diff-preview target-branch --depth 1 -q -b helm-example-3
 
@@ -17,7 +17,7 @@ docker run \
    -v $(pwd)/target-branch:/target-branch \
    -e TARGET_BRANCH=helm-example-3 \
    -e REPO=dag-andersen/argocd-diff-preview \
-   dagandersen/argocd-diff-preview:v0.0.19
+   jeremygovi/argocd-diff-preview:v0.0.19
 ```
 
 and the output would be something like this:
@@ -63,4 +63,4 @@ and the output would be something like this:
 Finally, you can view the diff by running `cat ./output/diff.md`. The diff should look something like [this](https://github.com/dag-andersen/argocd-diff-preview/pull/16)
 
 !!! important "Questions, issues, or suggestions"
-    If you experience issues or have any questions, please open an issue in the repository! 🚀
+If you experience issues or have any questions, please open an issue in the repository! 🚀

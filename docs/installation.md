@@ -28,7 +28,7 @@
       -e TARGET_BRANCH=<branch-a> \
       -e BASE_BRANCH=<branch-b> \
       -e REPO=<owner>/<repo>  \
-      dagandersen/argocd-diff-preview:v0.0.19
+      jeremygovi/argocd-diff-preview:v0.0.19
     ```
 
     If base-branch(`BASE_BRANCH`) is not specified it will default to `main`.
@@ -120,4 +120,3 @@
     ```
 
     If base-branch is not specified it will default to `main`.
-

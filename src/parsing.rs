@@ -27,10 +27,20 @@ pub async fn get_applications_as_string(
     selector: &Option<Vec<Selector>>,
     repo: &str,
 ) -> Result<String, Box<dyn Error>> {
+    debug!("Starting to fetch applications as string with directory: '{}', branch: '{}', regex: '{:?}', selector: '{:?}', repo: '{}'", directory, branch, regex, selector, repo);
+    
     let yaml_files = get_yaml_files(directory, regex).await;
+    debug!("Collected YAML files: {:?}", yaml_files);
+    
     let k8s_resources = parse_yaml(yaml_files).await;
+    debug!("Parsed K8s resources: {:?}", k8s_resources);
+    
     let applications = get_applications(k8s_resources, selector);
+    debug!("Filtered applications: {:?}", applications);
+    
     let output = patch_applications(applications, branch, repo).await?;
+    debug!("Final output: {}", output);
+    
     Ok(output)
 }
 
@@ -67,9 +77,11 @@ async fn get_yaml_files(directory: &str, regex: &Option<Regex>) -> Vec<String> {
 }
 
 async fn parse_yaml(files: Vec<String>) -> Vec<K8sResource> {
+    debug!("Starting to parse YAML files: {:?}", files);
+
     files.iter()
         .flat_map(|f| {
-            debug!("Found file: {}", f);
+            debug!("Opening file: {}", f);
             let file = std::fs::File::open(f).unwrap();
             let reader = std::io::BufReader::new(file);
             let lines = reader.lines().map(|l| l.unwrap());
@@ -84,6 +96,8 @@ async fn parse_yaml(files: Vec<String>) -> Vec<K8sResource> {
                 }
                 acc
             });
+            debug!("Raw YAML chunks: {:?}", raw_yaml_chunks);
+
             let yaml_vec: Vec<K8sResource> = raw_yaml_chunks.iter_mut().enumerate().map(|(i,r)| {
                 let yaml = match serde_yaml::from_str(r) {
                     Ok(r) => r,
@@ -92,11 +106,13 @@ async fn parse_yaml(files: Vec<String>) -> Vec<K8sResource> {
                         serde_yaml::Value::Null
                     }
                 };
+                debug!("Parsed YAML resource in file '{}': {:?}", f, yaml);
                 K8sResource {
                     file_name: f.clone(),
                     yaml,
                 }
             }).collect();
+
             yaml_vec
         })
         .collect()
@@ -108,42 +124,57 @@ async fn patch_applications(
     repo: &str,
 ) -> Result<String, Box<dyn Error>> {
     info!("🤖 Patching applications for branch: {}", branch);
+    debug!("Applications before patching: {:?}", applications);
 
     let point_destination_to_in_cluster = |spec: &mut Mapping| {
+        debug!("Patching destination to in-cluster...");
         if spec.contains_key("destination") {
             spec["destination"]["name"] = serde_yaml::Value::String("in-cluster".to_string());
             spec["destination"]
                 .as_mapping_mut()
                 .map(|a| a.remove("server"));
+            debug!("Updated destination to in-cluster: {:?}", spec["destination"]);
         }
     };
 
     let set_project_to_default =
-        |spec: &mut Mapping| spec["project"] = serde_yaml::Value::String("default".to_string());
+        |spec: &mut Mapping| {
+            debug!("Setting project to default...");
+            spec["project"] = serde_yaml::Value::String("default".to_string());
+            debug!("Updated project: {:?}", spec["project"]);
+        };
 
-    let remove_sync_policy = |spec: &mut Mapping| spec.remove("syncPolicy");
+    let remove_sync_policy = |spec: &mut Mapping| {
+        debug!("Removing syncPolicy...");
+        spec.remove("syncPolicy");
+        debug!("SyncPolicy removed.");
+    };
 
     let redirect_sources = |spec: &mut Mapping, file: &str| {
+        debug!("Redirecting sources in file: {}", file);
         if spec.contains_key("source") {
             if spec["source"]["chart"].as_str().is_some() {
+                debug!("Source is a Helm chart, skipping repo URL update.");
                 return;
             }
             match spec["source"]["repoURL"].as_str() {
                 Some(url) if url.contains(repo) => {
-                    spec["source"]["targetRevision"] = serde_yaml::Value::String(branch.to_string())
+                    spec["source"]["targetRevision"] = serde_yaml::Value::String(branch.to_string());
+                    debug!("Updated targetRevision to branch '{}'", branch);
                 }
-                _ => debug!("Found no 'repoURL' under spec.sources[] in file: {}", file),
+                _ => debug!("Found no 'repoURL' under spec.source in file: {}", file),
             }
         } else if spec.contains_key("sources") {
             if let Some(sources) = spec["sources"].as_sequence_mut() {
                 for source in sources {
                     if source["chart"].as_str().is_some() {
+                        debug!("Source is a Helm chart, skipping repo URL update.");
                         continue;
                     }
                     match source["repoURL"].as_str() {
                         Some(url) if url.contains(repo) => {
-                            source["targetRevision"] =
-                                serde_yaml::Value::String(branch.to_string());
+                            source["targetRevision"] = serde_yaml::Value::String(branch.to_string());
+                            debug!("Updated targetRevision to branch '{}'", branch);
                         }
                         _ => debug!("Found no 'repoURL' under spec.sources[] in file: {}", file),
                     }
@@ -155,8 +186,9 @@ async fn patch_applications(
     let applications: Vec<Application> = applications
         .into_iter()
         .map(|mut a| {
-            // Update namesapce
+            // Update namespace
             a.yaml["metadata"]["namespace"] = serde_yaml::Value::String("argocd".to_string());
+            debug!("Updated namespace for application in file '{}'", a.file_name);
             a
         })
         .filter_map(|mut a| {
@@ -172,7 +204,7 @@ async fn patch_applications(
             point_destination_to_in_cluster(spec);
             redirect_sources(spec, &a.file_name);
             debug!(
-                "Collected resources from application: {:?} in file: {}",
+                "Processed application {:?} in file: {}",
                 a.yaml["metadata"]["name"].as_str().unwrap_or("unknown"),
                 a.file_name
             );
@@ -185,6 +217,7 @@ async fn patch_applications(
         applications.len(),
         branch
     );
+    debug!("Applications after patching: {:?}", applications);
 
     // convert back to yaml string
     let mut output = String::new();
@@ -192,6 +225,7 @@ async fn patch_applications(
         output.push_str(&serde_yaml::to_string(&r.yaml)?);
         output.push_str("---\n");
     }
+    debug!("Final YAML output: {}", output);
 
     Ok(output)
 }
@@ -200,6 +234,8 @@ fn get_applications(
     k8s_resources: Vec<K8sResource>,
     selector: &Option<Vec<Selector>>,
 ) -> Vec<Application> {
+    debug!("Getting applications from K8s resources: {:?}", k8s_resources);
+
     k8s_resources
         .into_iter()
         .filter_map(|r| {
@@ -235,6 +271,8 @@ fn get_applications(
                         None => Vec::new(),
                     }
                 };
+                debug!("Application labels: {:?}", labels);
+
                 let selected = selector.iter().all(|l| match l.operator {
                     Operator::Eq => labels.iter().any(|(k, v)| k == &l.key && v == &l.value),
                     Operator::Ne => labels.iter().all(|(k, v)| k != &l.key || v != &l.value),
